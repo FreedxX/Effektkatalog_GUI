@@ -95,14 +95,19 @@ class NameProperties():
 
         # print(query)
         self.data_table = self.graph.run(query).to_table()
+        # print(self.data_table[0][0].end_node['Einordnung'][0])
 
         self.attr = tuple(sorted(set([nodes[0].end_node['Name'] for nodes in self.data_table])))
+        self.attr2 = tuple(sorted(set(([nodes2[0].end_node['Einordnung'][0] for nodes2 in self.data_table]))))
+        # print("Attr2")
+        # print(self.attr2)
+        # self.attr2 = ["",]
         # removes duplicates (set) sort alphabetically and capitalize the first letter --> then return as tuple
 
         # case if nothing returned
         if self.attr == []:
             self.attr = ["NaN - please change search!"]
-
+            self.attr2 = ["please select type from above"]
         else:
             pass
         #reset of labels
@@ -110,7 +115,7 @@ class NameProperties():
         self.NameStart = None
         self.nodelabelE = None
 
-        return self.attr
+        return self.attr, self.attr2
 
     def GetNode(self):
 
@@ -134,6 +139,7 @@ class NameProperties():
         #print(self.teildomaene)
 
         self.attr = tuple(sorted(set([nodes["Name"] for nodes in self.teildomaene])))
+
         if self.attr == []:
             self.attr = ["please select type from above"]
 
@@ -180,21 +186,21 @@ class NameProperties():
         for line in range(len(self.nodelist)):
 
             self.ID = int(self.nodelist[line].identity)
-            print(self.ID)
+            # print(self.ID)
             self.Lb = str(self.nodelist[line].labels)[1:]
-            print(self.Lb)
+            # print(self.Lb)
             # get ID and label of match and print them just for debugging
 
 
-            print(self.nodelist[line][str(what)])
+            # print(self.nodelist[line][str(what)])
             self.sumdict[self.nodelist[line][str(what)]]= 0
-            print(self.sumdict)
+            # print(self.sumdict)
             # create dictionary entry of the property to avoid duplicates --> value = 0 for  simplicity
             # print(self.sumdict)
 
         self.sumlist = list(self.sumdict.keys())
         # change to list
-        print(self.sumlist)
+        # print(self.sumlist)
 
         return self.sumlist
 
@@ -773,7 +779,7 @@ def add_parameter(labelname, nameproperty, unit, Siunit, graph):
             newparameter = Node(str(labelname), Name=nameproperty, Einheit=unit, SI_Einheit=Siunit, weight=5)
             newparameter.__primarylabel__ = labelname
             newparameter.__primarykey__ = "Name"
-            print(newparameter)
+            #print(newparameter)
             graph.merge(newparameter)
             parident = str(newparameter.identity)
             ident = str(26) # ID of 'Funktionsrelevante Parameter'
@@ -938,7 +944,9 @@ def chrosscheck_cypher(listvar,listpar, graph):
 
     cypherstatement2 = "match p=(n)-[r:URSACHE_WIRKUNG|HAT_PARAMETER]-(e)-[f:URSACHE_WIRKUNG|HAT_PARAMETER]-(m) \n" \
                   "WHERE ID(n) in " +str((ident))+" and ID(m)in " +str((ident))+"\n"\
-                  "return p"
+                  "with *" \
+                  "\nwhere ID(n) <> ID(m)" \
+                  "\nreturn p"
 
     print(cypherstatement2)
 
@@ -984,6 +992,30 @@ def   chrosscheck_cypher_get_neighbours(listvar, listpar, graph):
 
     return cypherstatement_new
 
+def   chrosscheck_cypher_get_Example(listvar, graph):
+    # this function create the Cypher chrosscheck
+    ident = []
+    print(listvar)
+
+    for var in listvar:
+        if var != "None":
+            nodes = NodeMatcher(graph)
+            node = list((nodes.match(Name=str(var))))
+            print("ID:" + str(node[0].identity))
+            # print("Label:" + str(node[0].labels)[1:])
+            ident.append(int(node[0].identity))
+
+        else:
+            pass
+
+    cypherstatement_new = "match p=(n)-[r:HAT_BEISPIEL*1]-(e) \n" \
+                        "WHERE ID(n) in " + str((ident)) +"\n"\
+                        "WITH * \n"\
+                        "return distinct p"
+
+    print(cypherstatement_new)
+
+    return cypherstatement_new
 
 def getNodesnbyproperty(nproperty, name):
 
@@ -995,6 +1027,10 @@ def getNodesnbyproperty(nproperty, name):
 
     return cypherstatement_new
 
+
+def allinks(Liste):
+    for ellink in Liste:
+        webbrowser.open(ellink)
 
 
 # p = (n) - [r:URSACHE_WIRKUNG | HAT_PARAMETER]-(e) - [f: URSACHE_WIRKUNG | HAT_PARAMETER]-(m)
@@ -1015,6 +1051,177 @@ import tkinter as tk
 from tkinter import ttk
 
 tk_umlauts = ['odiaeresis', 'adiaeresis', 'udiaeresis', 'Odiaeresis', 'Adiaeresis', 'Udiaeresis', 'ssharp']
+#
+#
+# class AutocompleteCombobox(ttk.Combobox):
+#     """:class:`ttk.Combobox` widget that features autocompletion."""
+#     def __init__(self, master=None, completevalues=None, boxstate=None, **kwargs):
+#         """
+#         Create an AutocompleteCombobox.
+#
+#         :param master: master widget
+#         :type master: widget
+#         :param completevalues: autocompletion values
+#         :type completevalues: list
+#         :param kwargs: keyword arguments passed to the :class:`ttk.Combobox` initializer
+#         """
+#         completevalues=sorted(completevalues, key=str.casefold)
+#         ttk.Combobox.__init__(self, master, values=completevalues, state='readonly', **kwargs)
+#         #self._completion_list = completevalues
+#         self._completion_list = completevalues
+#         self.configure(state=boxstate)
+#         if isinstance(completevalues, list):
+#             self.set_completion_list(completevalues)
+#             self.set_completion_list(sorted(completevalues, key=str.casefold))
+#         self._hits = []
+#         self._hit_index = 0
+#         self.position = 0
+#         # navigate on keypress in the dropdown:
+#         # code taken from https://wiki.tcl-lang.org/page/ttk%3A%3Acombobox by Pawel Salawa, copyright 2011
+#         # the folloing string is written in tcl tcl is an other langauge
+#         self.tk.eval("""
+#         proc ComboListKeyPressed {w key} {
+#         if {[string length $key] > 1 && [string tolower $key] != $key} {
+#                 return
+#         }
+#
+#         set cb [winfo parent [winfo toplevel $w]]
+#         set text [string map [list {[} {\[} {]} {\]}] $key]
+#         if {[string equal $text ""]} {
+#                 return
+#         }
+#
+#         set values [$cb cget -values]
+#         set x [lsearch -glob -nocase $values $text*]
+#         if {$x < 0} {
+#                 return
+#         }
+#
+#         set current [$w curselection]
+#         if {$current == $x && [string match -nocase $text* [lindex $values [expr {$x+1}]]]} {
+#                 incr x
+#         }
+#
+#         $w selection clear 0 end
+#         $w selection set $x
+#         $w activate $x
+#         $w see $x
+#         }
+#
+#         set popdown [ttk::combobox::PopdownWindow %s]
+#         bind $popdown.f.l <KeyPress> [list ComboListKeyPressed %%W %%K]
+#         """ % (self))
+#
+#     def set_completion_list(self, completion_list):
+#         """
+#         Use the completion list as drop down selection menu, arrows move through menu.
+#
+#         :param completion_list: completion values
+#         :type completion_list: list
+#         """
+#
+#         self._completion_list = sorted(completion_list, key=str.casefold) # casefold Work with a sorted list Update SM str.lower
+#         # print(self._completion_list)
+#         self.configure(values=completion_list)
+#         self._hits = []
+#         self._hit_index = 0
+#         self.position = 0
+#         self.bind('<KeyRelease>', self.handle_keyrelease)
+#         #self.bind('<Return>', self.handle_keyrelease)
+#         self['values'] = self._completion_list  # Setup our popup menu
+#
+#     def autocomplete(self, delta=0):
+#         """
+#         Autocomplete the Combobox.
+#
+#         :param delta: 0, 1 or -1: how to cycle through possible hits
+#         :type delta: int
+#         """
+#         if delta:  # need to delete selection otherwise we would fix the current position
+#             self.delete(self.position, tk.END)
+#         else:  # set position to end so selection starts where textentry ended
+#             self.position = len(self.get())
+#         # collect hits
+#         _hits = []
+#         for element in self._completion_list:
+#             if element.lower() in self.get().lower():
+#                 _hits.append(element)
+#             # if element.lower().startswith(self.get().lower()):  # Match case insensitively
+#             #     _hits.append(element)
+#         # if we have a new hit list, keep this in mind
+#         if _hits != self._hits:
+#             self._hit_index = 0
+#             self._hits = _hits
+#         # only allow cycling if we are in a known hit list
+#         if _hits == self._hits and self._hits:
+#             self._hit_index = (self._hit_index + delta) % len(self._hits)
+#         # now finally perform the auto completion
+#         if self._hits:
+#             self.delete(0, tk.END)
+#             self.insert(0, self._hits[self._hit_index])
+#             self.select_range(self.position, tk.END)
+#
+#     def handle_keyrelease(self, event):
+#         """
+#         Event handler for the keyrelease event on this widget.
+#
+#         :param event: Tkinter event
+#         """
+#         if event.keysym == "BackSpace":
+#             self.delete(self.index(tk.INSERT), tk.END)
+#             self.position = self.index(tk.END)
+#         if event.keysym == "Left":
+#             if self.position < self.index(tk.END):  # delete the selection
+#                 self.delete(self.position, tk.END)
+#             else:
+#                 self.position = self.position - 1  # delete one character
+#                 self.delete(self.position, tk.END)
+#         if event.keysym == "Right":
+#             self.position = self.index(tk.END)  # go to end (no selection)
+#         if event.keysym == "Return":
+#             self.handle_return(None)
+#             return
+#         if len(event.keysym) == 1:
+#             self.autocomplete()
+#             # No need for up/down, we'll jump to the popup
+#             # list at the position of the autocompletion
+#
+#     def handle_return(self, event):
+#         """
+#         Function to bind to the Enter/Return key so if Enter is pressed the selection is cleared
+#
+#         :param event: Tkinter event
+#         """
+#         self.icursor(tk.END)
+#         self.selection_clear()
+#
+#     def config(self, **kwargs):
+#         """Alias for configure"""
+#         self.configure(**kwargs)
+#
+#     def configure(self, **kwargs):
+#         """Configure widget specific keyword arguments in addition to :class:`ttk.Combobox` keyword arguments."""
+#         if "completevalues" in kwargs:
+#             self.set_completion_list(kwargs.pop("completevalues"))
+#         return ttk.Combobox.configure(self, **kwargs)
+#
+#     def cget(self, key):
+#         """Return value for widget specific keyword arguments"""
+#         if key == "completevalues":
+#             return self._completion_list
+#         return ttk.Combobox.cget(self, key)
+#
+#     def keys(self):
+#         """Return a list of all resource names of this widget."""
+#         keys = ttk.Combobox.keys(self)
+#         keys.append("completevalues")
+#         return keys
+#
+#     def __setitem__(self, key, value):
+#         self.configure(**{key: value})
+#
+#     def __getitem__(self, item):
+#         return self.cget(item)
 
 
 class AutocompleteCombobox(ttk.Combobox):
@@ -1029,20 +1236,18 @@ class AutocompleteCombobox(ttk.Combobox):
         :type completevalues: list
         :param kwargs: keyword arguments passed to the :class:`ttk.Combobox` initializer
         """
-        completevalues=sorted(completevalues, key=str.casefold)
         ttk.Combobox.__init__(self, master, values=completevalues, state='readonly', **kwargs)
-        #self._completion_list = completevalues
+        completevalues = sorted(completevalues, key=str.casefold)
         self._completion_list = completevalues
         self.configure(state=boxstate)
         if isinstance(completevalues, list):
             self.set_completion_list(completevalues)
-            self.set_completion_list(sorted(completevalues, key=str.casefold))
+            # self.set_completion_list(sorted(completevalues, key=str.casefold))
         self._hits = []
         self._hit_index = 0
         self.position = 0
         # navigate on keypress in the dropdown:
         # code taken from https://wiki.tcl-lang.org/page/ttk%3A%3Acombobox by Pawel Salawa, copyright 2011
-        # the folloing string is written in tcl tcl is an other langauge
         self.tk.eval("""
         proc ComboListKeyPressed {w key} {
         if {[string length $key] > 1 && [string tolower $key] != $key} {
@@ -1084,14 +1289,15 @@ class AutocompleteCombobox(ttk.Combobox):
         :type completion_list: list
         """
 
-        self._completion_list = sorted(completion_list, key=str.casefold) # casefold Work with a sorted list Update SM str.lower
-        print(self._completion_list)
+        self._completion_list = sorted(completion_list,
+                                       key=str.casefold)  # casefold Work with a sorted list Update SM str.lower
+
+        #Work with a sorted list
         self.configure(values=completion_list)
         self._hits = []
         self._hit_index = 0
         self.position = 0
         self.bind('<KeyRelease>', self.handle_keyrelease)
-        #self.bind('<Return>', self.handle_keyrelease)
         self['values'] = self._completion_list  # Setup our popup menu
 
     def autocomplete(self, delta=0):
@@ -1108,10 +1314,8 @@ class AutocompleteCombobox(ttk.Combobox):
         # collect hits
         _hits = []
         for element in self._completion_list:
-            if element.lower() in self.get().lower():
+            if element.lower().startswith(self.get().lower()):  # Match case insensitively
                 _hits.append(element)
-            # if element.lower().startswith(self.get().lower()):  # Match case insensitively
-            #     _hits.append(element)
         # if we have a new hit list, keep this in mind
         if _hits != self._hits:
             self._hit_index = 0
@@ -1135,7 +1339,7 @@ class AutocompleteCombobox(ttk.Combobox):
             self.delete(self.index(tk.INSERT), tk.END)
             self.position = self.index(tk.END)
         if event.keysym == "Left":
-            if self.position < self.index(tk.END)+2:  # delete the selection
+            if self.position < self.index(tk.END):  # delete the selection
                 self.delete(self.position, tk.END)
             else:
                 self.position -= 1  # delete one character
@@ -1186,6 +1390,7 @@ class AutocompleteCombobox(ttk.Combobox):
 
     def __getitem__(self, item):
         return self.cget(item)
+
 
 
 def button_pressed(self):

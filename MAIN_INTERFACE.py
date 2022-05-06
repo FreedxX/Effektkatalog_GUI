@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import copy
 import threading
 import networkx as nx
+import webbrowser
 from py2neo import Graph, ServiceUnavailable, ConnectionUnavailable  # WireError
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # user defined functions
@@ -19,8 +20,11 @@ from FUNCTIONS_FOR_INTERFACE import name_reader
 from FUNCTIONS_FOR_INTERFACE import Draw_every_var_for_effect
 from FUNCTIONS_FOR_INTERFACE import match_n_add, chrosscheck_cypher, add_parameter, chrosscheck_cypher_get_neighbours
 from FUNCTIONS_FOR_INTERFACE import AutocompleteCombobox
+from FUNCTIONS_FOR_INTERFACE import chrosscheck_cypher_get_Example
 from FUNCTIONS_FOR_INTERFACE import ScrollableImage
 from FUNCTIONS_FOR_INTERFACE import Link
+import time
+from FUNCTIONS_FOR_INTERFACE import allinks
 # from FUNCTIONS_FOR_INTERFACE import button_pressed
 
 
@@ -275,7 +279,10 @@ class GUIApp:
             self.tabControl = ttk.Notebook(self.root)
 
 
-            # setup  3 taps with ttk.Frame().add 12 tab is hidden immediately again
+            # setup  36taps with ttk.Frame().add 12 tab is hidden immediately again
+            self.tab6 = ttk.Frame(self.tabControl)
+            self.tabControl.add(self.tab6, text="Infobox MPBM")
+
 
             self.tab0 = ttk.Frame(self.tabControl)
             self.tabControl.add(self.tab0, text="Effektabfrage aus DBMS")
@@ -310,6 +317,20 @@ class GUIApp:
             print("\n\n=========================================================================")
             print("==============================SETUP RUNNING==============================")
             print("=========================================================================\n\n")
+            # ====== Setuo infobox ====
+
+
+
+            self.linecanvast6 = tk.Canvas(self.tab6, width=754, height=732)
+            self.linecanvast6.pack()
+            self.metat6 = tk.PhotoImage(file="infobox_white.png")
+            self.linecanvast6.create_image(0,0, image=self.metat6, anchor="nw")
+
+
+            self.buttont6 = ttk.Button(master=self.tab6, text="Ende", command=self._quit, style="my.TButton")
+            self.buttont6.place(x=0, y=0, width=38, height=30) #grid(row=0, column=0, sticky="n w", padx =4, ipady = 5  )
+
+
 
             # ====== Setup widgets for tab0  - LEFT COLUMN======
 
@@ -379,7 +400,7 @@ class GUIApp:
             self.ent3t0.place(x=50, y=300, width=105, height=40)
 
             # Get Relationship is similar to getNode but returns the nodes connetected to "Teildomäne"
-            self.listentr3t0 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()]
+            self.listentr3t0 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]]
             self.optm3t0 = AutocompleteCombobox(self.tab0, self.listentr3t0, 'readonly')
             self.optm3t0.place(x=50, y=330, width=200, height=30)
             self.optm3t0.bind("<<ComboboxSelected>>", self.optm3t0_command)
@@ -470,8 +491,8 @@ class GUIApp:
             self.ent8t0["text"] = "Auswahl Wirkungsgröße"
             self.ent8t0.place(x=300, y=300, width=145, height=40)
 
-            self.listentr8t0 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()]+["beliebig"]
+            self.listentr8t0 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]]+["beliebig"]
             self.optm8t0 = AutocompleteCombobox(self.tab0, self.listentr8t0, 'readonly')
             self.optm8t0.place(x=300, y=330, width=200, height=30)
             self.optm8t0.bind("<<ComboboxSelected>>", self.optm8t0_command)
@@ -546,16 +567,23 @@ class GUIApp:
             self.btn4t0["command"] = self.btn4t0_command
             self.btn4t0.place(x=580, y=30, width=120, height=30)
 
-            self.button = ttk.Button(master=self.tab0, text="Quit", command=self._quit, style="my.TButton")
+            self.button = ttk.Button(master=self.tab0, text="Ende", command=self._quit, style="my.TButton")
             self.button.place(x=0, y=0, width=38, height=30)
 
             # ====== Setup for Effektinformation tab =============
+            self.btn9t4 = ttk.Button(self.tab4)
+            # button for optm3t1 (type Zustandgröße Eingang)
+            self.btn9t4["text"] = "Beispiele"
+            self.btn9t4["style"] = "my.TButton"
+            self.btn9t4.place(x=190, y=280, width=60, height=36)
+            # grid(row=12, column=1, sticky="n s w e", )
+            self.btn9t4["command"] = self.btn9t4_command
 
             self.btn8t4 = ttk.Button(self.tab4)
             # button for optm3t1 (type Zustandgröße Eingang)
-            self.btn8t4["text"] = "Angrenzende Effekte Anzeigen"
+            self.btn8t4["text"] = "Angrenzende Effekte"
             self.btn8t4["style"] = "my.TButton"
-            self.btn8t4.place(x=50, y=280, width=200, height=36)
+            self.btn8t4.place(x=50, y=280, width=140, height=36)
             #grid(row=12, column=1, sticky="n s w e", )
             self.btn8t4["command"] = self.btn8t4_command
 
@@ -600,8 +628,8 @@ class GUIApp:
             self.ent2t4.place(x=50, y=140, width=200, height=40)
             #grid(row=6, column=1, sticky="n s w e")
 
-            self.listentr2t4 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()] + \
+            self.listentr2t4 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]] + \
                                 [*NameProperties("Effekt", None, None, self.graph).GetNode()] + \
                                 [*NameProperties("Parameter-Effekt", None, None, self.graph).GetNode()]
             self.optm2t4 = AutocompleteCombobox(self.tab4, self.listentr2t4, 'readonly')
@@ -658,8 +686,10 @@ class GUIApp:
             #grid(row=1, column=3, padx=15,pady=15, rowspan=14, columnspan=14, sticky="n s w e")
 
 
-            self.buttont4 = ttk.Button(master=self.tab4, text="Quit", command=self._quit, style="my.TButton")
+            self.buttont4 = ttk.Button(master=self.tab4, text="Ende", command=self._quit, style="my.TButton")
             self.buttont4.place(x=0, y=0, width=38, height=30) #grid(row=0, column=0, sticky="n w", padx =4, ipady = 5  )
+
+
 
             # ========================Tab 5  overview of completness=============================
 
@@ -675,7 +705,7 @@ class GUIApp:
             # self.meta = tk.PhotoImage(file='Matrix_füllstand.png')
             # self.linecanvast5.create_image(10, 10, image=self.meta, anchor="nw")
 
-            self.buttont5 = ttk.Button(master=self.tab5, text="Quit", command=self._quit, style="my.TButton")
+            self.buttont5 = ttk.Button(master=self.tab5, text="Ende", command=self._quit, style="my.TButton")
             self.buttont5.place(x=0, y=0, width=38, height=30)
 
 
@@ -738,7 +768,8 @@ class GUIApp:
             self.ent20t2.place(x=50, y=self.dist2r1, width=140, height=25)
             self.dist2r1 = self.dist2r1 + 25
 
-            self.entr20t2 = ScrolledText(self.tab2)
+
+            self.entr20t2 = ScrolledText(self.tab2 )
             self.entr20t2.place(x=50, y=self.dist2r1, width=200, height=50)
             self.dist2r1 = self.dist2r1 + 60
 
@@ -801,7 +832,8 @@ class GUIApp:
             self.ent21t2.place(x=50, y=self.dist2r1, width=35, height=25)
             self.dist2r1 = self.dist2r1 + 25
 
-            self.entr21t2 = ttk.Entry(self.tab2)
+            self.entr21t2Var= tk.StringVar()
+            self.entr21t2 = ttk.Entry(self.tab2 ,text= self.entr21t2Var)
             self.entr21t2.place(x=50, y=self.dist2r1, width=200, height=30)
             self.dist2r1 = self.dist2r1 + 40 #+ 80
 
@@ -842,7 +874,7 @@ class GUIApp:
             self.ent1t2.place(x=300, y=self.dist2r2, width=195, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr1t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr1t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr1t2 = AutocompleteCombobox(self.tab2, self.listentr1t2, 'readonly')
             self.entr1t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr1t2.set("None")
@@ -855,7 +887,7 @@ class GUIApp:
             self.ent2t2.place(x=300, y=self.dist2r2, width=195, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr2t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr2t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr2t2 = AutocompleteCombobox(self.tab2, self.listentr2t2, 'readonly')
             self.entr2t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr2t2.set("None")
@@ -868,7 +900,7 @@ class GUIApp:
             self.ent3t2.place(x=300, y=self.dist2r2 , width=190, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr3t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr3t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr3t2 = AutocompleteCombobox(self.tab2, self.listentr3t2, 'readonly')
             self.entr3t2.place(x=300, y=self.dist2r2 , width=200, height=30)
             self.entr3t2.set("None")
@@ -881,7 +913,7 @@ class GUIApp:
             self.ent23t2.place(x=300, y=self.dist2r2, width=190, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr23t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr23t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr23t2 = AutocompleteCombobox(self.tab2, self.listentr3t2, 'readonly')
             self.entr23t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr23t2.set("None")
@@ -894,7 +926,7 @@ class GUIApp:
             self.ent4t2.place(x=300, y=self.dist2r2, width=190, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr4t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr4t2 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr4t2 = AutocompleteCombobox(self.tab2, self.listentr4t2, 'readonly')
             self.entr4t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr4t2.set("None")
@@ -907,7 +939,7 @@ class GUIApp:
             self.ent15t2.place(x=300, y=self.dist2r2, width=170, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr15t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship())
+            self.listentr15t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship()[0])
             self.entr15t2 = AutocompleteCombobox(self.tab2, self.listentr15t2, 'write')
             self.entr15t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr15t2.set("None")
@@ -920,7 +952,7 @@ class GUIApp:
             self.ent16t2.place(x=300, y=self.dist2r2, width=170, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr16t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship())
+            self.listentr16t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship()[0])
             self.entr16t2 = AutocompleteCombobox(self.tab2, self.listentr16t2, 'write')
             self.entr16t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr16t2.set("None")
@@ -933,7 +965,7 @@ class GUIApp:
             self.ent17t2.place(x=300, y=self.dist2r2, width=170, height=25)
             self.dist2r2 = self.dist2r2 + 25
 
-            self.listentr17t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship())
+            self.listentr17t2 = ('None',) + (NameProperties("Beispiel", None, None, self.graph).GetRelationship()[0])
             self.entr17t2 = AutocompleteCombobox(self.tab2, self.listentr17t2, 'write')
             self.entr17t2.place(x=300, y=self.dist2r2, width=200, height=30)
             self.entr17t2.set("None")
@@ -951,7 +983,7 @@ class GUIApp:
             self.ent5t2.place(x=550, y=self.dist2r3, width=180, height=25)
             self.dist2r3 = self.dist2r3 + 25
 
-            self.listentr5t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+            self.listentr5t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
             self.entr5t2 = AutocompleteCombobox(self.tab2, self.listentr5t2, 'readonly')
             self.entr5t2.place(x=550, y=self.dist2r3, width=200, height=30)
             self.entr5t2.set("None")
@@ -964,7 +996,7 @@ class GUIApp:
             self.ent6t2.place(x=550, y=self.dist2r3, width=180, height=25)
             self.dist2r3 = self.dist2r3 + 25
 
-            self.listentr6t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+            self.listentr6t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
             self.entr6t2 = AutocompleteCombobox(self.tab2, self.listentr6t2, 'readonly')
             self.entr6t2.place(x=550, y=self.dist2r3, width=200, height=30)
             self.entr6t2.set("None")
@@ -977,7 +1009,7 @@ class GUIApp:
             self.ent7t2.place(x=550, y=self.dist2r3, width=180, height=25)
             self.dist2r3 = self.dist2r3 + 25
 
-            self.listentr7t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+            self.listentr7t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
             self.entr7t2 = AutocompleteCombobox(self.tab2, self.listentr7t2, 'readonly')
             self.entr7t2.place(x=550, y=self.dist2r3, width=200, height=30)
             self.entr7t2.set("None")
@@ -990,7 +1022,7 @@ class GUIApp:
             self.ent8t2.place(x=550, y=self.dist2r3, width=180, height=25)
             self.dist2r3 = self.dist2r3 + 25
 
-            self.listentr8t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+            self.listentr8t2 = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
             self.entr8t2 = AutocompleteCombobox(self.tab2, self.listentr8t2, 'readonly')
             self.entr8t2.place(x=550, y=self.dist2r3, width=200, height=30)
             self.entr8t2.set("None")
@@ -1053,13 +1085,13 @@ class GUIApp:
             # self.FCtk1t1.draw()
             # self.FCtk1t1["bg"] = "#ffffff"
             # self.FCtk1t1["justify"] = "left"
-            self.FCtk2t2.get_tk_widget().place(x=800, y=30+25, width=430, height=230)
+            self.FCtk2t2.get_tk_widget().place(x=800, y=30+25, width=430, height=300)
 
             self.ent8t2 = tk.Label(self.tab2)
             self.ent8t2["fg"] = "#333333"
             self.ent8t2["justify"] = "center"
             self.ent8t2["text"] = " Zusammenfassung der Eingaben "
-            self.ent8t2.place(x=800, y=300, width=195, height=25)
+            self.ent8t2.place(x=800, y=360, width=195, height=25)
 
             self.fig1t2 = plt.figure()
             self.ax1t2 = self.fig1t2.add_subplot(1, 1, 1)
@@ -1068,7 +1100,7 @@ class GUIApp:
             # self.FCtk1t1.draw()
             # self.FCtk1t1["bg"] = "#ffffff"
             # self.FCtk1t1["justify"] = "left"
-            self.FCtk1t2.get_tk_widget().place(x=800, y=330, width=430, height=390)
+            self.FCtk1t2.get_tk_widget().place(x=800, y=390, width=430, height=330)
 
 
 
@@ -1079,13 +1111,13 @@ class GUIApp:
             self.btn3t2["text"] = "Bestätigung Eingaben und einfügen in die Datenbank"
             self.btn3t2["command"] = self.btn3t2_command
 
-            self.buttont2 = ttk.Button(master=self.tab2, text="Quit", command=self._quit, style="my.TButton")
+            self.buttont2 = ttk.Button(master=self.tab2, text="Ende", command=self._quit, style="my.TButton")
             self.buttont2.place(x=0, y=0, width=38, height=30)
 
             self.btn4t2 = ttk.Button(self.tab2, style="my.TButton")
             self.btn4t2.place(x=0, y=35, width=38, height=30)
             # self.btn1t2["justify"] = "center"
-            self.btn4t2["text"] = "Lock"
+            self.btn4t2["text"] = "Sperren"
             self.btn4t2["command"] = self.btn2t1_command
 
             # ======================================
@@ -1113,7 +1145,7 @@ class GUIApp:
             self.ent2t3.place(x=50, y=55+40, width=160, height=25)
 
 
-            self.listentr2t3 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.listentr2t3 = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
             self.entr2t3 = AutocompleteCombobox(self.tab3, self.listentr2t3, 'write')
             self.entr2t3.place(x=50, y=95+25, width=200, height=30)
             self.entr2t3.set("None")
@@ -1145,7 +1177,7 @@ class GUIApp:
             self.btn1t3["text"] = "Create new parameter"
             self.btn1t3["command"] = self.btn1t3_command
 
-            self.buttont3 = ttk.Button(master=self.tab3, text="Quit", command=self._quit, style="my.TButton")
+            self.buttont3 = ttk.Button(master=self.tab3, text="Ende", command=self._quit, style="my.TButton")
             self.buttont3.place(x=0, y=0, width=38, height=30)
 
             self.button2t3 = ttk.Button(self.tab3, style="my.TButton")
@@ -1173,8 +1205,8 @@ class GUIApp:
             self.ent5t3["text"] = "Eingabe Knoten 1"
             self.ent5t3.place(x=300, y=0 + 40, width=100, height=25)
 
-            self.listentr5t3 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()] + \
+            self.listentr5t3 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]] + \
                                 [*NameProperties("Effekt", None, None, self.graph).GetNode()] + \
                                 [*NameProperties("Parameter-Effekt", None, None, self.graph).GetNode()]
             self.entr5t3 = AutocompleteCombobox(self.tab3, self.listentr5t3, 'normal')
@@ -1223,8 +1255,8 @@ class GUIApp:
             self.ent11t3["text"] = "Ändern des individuellen Knotengewichts"
             self.ent11t3.place(x=300, y=40 + 120, width=200, height=25)
 
-            self.listentr11t3 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()] + \
+            self.listentr11t3 = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]] + \
                                 [*NameProperties("Effekt", None, None, self.graph).GetNode()] + \
                                 [*NameProperties("Parameter-Effekt", None, None, self.graph).GetNode()]
             self.entr11t3 = AutocompleteCombobox(self.tab3, self.listentr11t3, 'normal')
@@ -1382,7 +1414,7 @@ class GUIApp:
 
         """
 
-        self.newmenu = NameProperties("Domäne", str(self.optm0t0.get()), None, self.graph).GetRelationship()
+        self.newmenu = NameProperties("Domäne", str(self.optm0t0.get()), None, self.graph).GetRelationship()[0]
         # FUNCTIONS_FOR_INTERCAE.NameProperties.GetRelationship(nodelabelS, NameStrt, nodelabelE, graph):
         # --> see FUNCTIONS_FOR_INTERFACE.py
         # tk.Listbox.get() returns the current value selected
@@ -1405,10 +1437,13 @@ class GUIApp:
 
             aswell it makes an case distinction whether parameters must be queried
         """
-        print(str(self.optm0t0.get()))
+        #print(str(self.optm0t0.get()))
         self.newmenu = NameProperties("Teildomäne", str(self.optm1t0.get()),
-                                      str(self.optm2t0.get()), self.graph).GetRelationship()
+                                      str(self.optm2t0.get()), self.graph).GetRelationship()[0]
+        self.newmenu2 = NameProperties("Teildomäne", str(self.optm1t0.get()),
+                                      None, self.graph).GetRelationship()[1]
         self.optm3t0["values"] = self.newmenu
+        self.optm2t0["values"] = self.newmenu2 + ("Bitte Wählen",)
         self.optm3t0.set("Bitte Wählen")
         self.optm2t0.set("Bitte Wählen")
 
@@ -1421,7 +1456,7 @@ class GUIApp:
             aswell it makes an case distinction whether parameters must be queried
                 """
         self.newmenu = NameProperties("Teildomäne", str(self.optm1t0.get()),
-                                      str(self.optm2t0.get()), self.graph).GetRelationship()
+                                      str(self.optm2t0.get()), self.graph).GetRelationship()[0]
         self.optm3t0["values"] = self.newmenu
         self.optm3t0.set("Bitte Wählen")
 
@@ -1440,8 +1475,8 @@ class GUIApp:
 
             aswell it makes an case distinction whether parameters must be queried
         """
-        print(str(self.optm5t0.get()))
-        self.newmenu = NameProperties("Domäne", str(self.optm5t0.get()), None, self.graph).GetRelationship()
+        #print(str(self.optm5t0.get()))
+        self.newmenu = NameProperties("Domäne", str(self.optm5t0.get()), None, self.graph).GetRelationship()[0]
         self.optm6t0["values"] = self.newmenu
         self.optm8t0.set("Bitte Wählen")
         self.optm6t0.set("Bitte Wählen")
@@ -1458,16 +1493,24 @@ class GUIApp:
 
         #  case differentiation
         if str(self.optm6t0.get()) == "Bitte Wählen":
-            self.adparameter = tuple(NameProperties("Parameter", None, None, self.graph).GetRelationship())
+            self.adparameter = tuple(NameProperties("Parameter", None, None, self.graph).GetRelationship())[0]
+            print(self.adparameter)
+            self.adparameter2 = tuple(NameProperties("Parameter", str(self.optm6t0.get()),
+                                      None, self.graph).GetRelationship()[1])
         else:
             self.adparameter = tuple()
+            self.adparameter2 = tuple()
 
         # basic query to get the "narrowed" options
         self.newmenu = NameProperties("Teildomäne", str(self.optm6t0.get()),
-                                      str(self.optm7t0.get()), self.graph).GetRelationship()
-
+                                      str(self.optm7t0.get()), self.graph).GetRelationship()[0]
+        self.newmenu2 = NameProperties("Teildomäne", str(self.optm6t0.get()),
+                                      None, self.graph).GetRelationship()[1]
+        print(self.newmenu)
+        print(self.newmenu2)
         # update of the downstream comboboxes and reset
-        self.optm8t0["values"] = (sorted(self.newmenu + self.adparameter + "beliebig"))
+        self.optm8t0["values"] = (sorted(self.newmenu + self.adparameter + ("beliebig",)))
+        self.optm7t0["values"] = (self.newmenu2 + self.adparameter2)
         self.optm8t0.set("Bitte Wählen")
         self.optm7t0.set("Bitte Wählen")
 
@@ -1482,8 +1525,8 @@ class GUIApp:
 
 
         self.newmenu = NameProperties("Teildomäne", str(self.optm6t0.get()),
-                                      str(self.optm7t0.get()), self.graph).GetRelationship() + \
-                       NameProperties("Parameter", None, str(self.optm7t0.get()), self.graph).GetRelationship()
+                                      str(self.optm7t0.get()), self.graph).GetRelationship()[0] + \
+                       NameProperties("Parameter", None, str(self.optm7t0.get()), self.graph).GetRelationship()[0]
 
         self.optm8t0["values"] = (sorted(self.newmenu + ("beliebig",)))
         self.optm8t0.set("Bitte Wählen")
@@ -1533,7 +1576,7 @@ class GUIApp:
 
         else:
             if self.b == "beliebig" and int(self.d) >=6:
-                self.msg5t0.config(text="Bitte kürzere Pfadlänge bei beliebigen Ziel")
+                self.msg5t0.config(text="Bitte kürzere Pfadlänge!")
 
                 return
             elif self.b == "beliebig":
@@ -1558,6 +1601,7 @@ class GUIApp:
 
 
     def querythread(self):
+        self.starttime = time.time()
 
         # what is happening in the following -well let me explain
         # (but also check the functions itself by STRG+click on it)
@@ -1565,6 +1609,7 @@ class GUIApp:
         # cause and impact gets transferred to ExeQuery and the Query is executed
         self.DataTable = ExeQuery.execute(self, cause=self.a, impact=self.b, graph=self.graph, length=self.d,
                                           quw=self.e, mweight=self.f, addinf=self.h)
+        self.midtime = time.time()
 
         # all properties of the Effekts are collected and written to the dictonary attrDict to be used later
         self.attrDict = ExeQuery.ExtractfromTable(self, datatable=self.DataTable)
@@ -1620,7 +1665,7 @@ class GUIApp:
                 # samesies but with opposite dataset
                 self.changemsg4t0(self.cosmeticoriginal)
                 self.ax.clear()
-                print(self.DataTable)
+                #print(self.DataTable)
                 print("Org")
                 print(self.originalNamesQueryPaths)
                 self.Gorg = Draw_every_path_in_one_Graph(self.originalNamesQueryPaths, self.graph)
@@ -1633,7 +1678,9 @@ class GUIApp:
         print("\n\n=========================================================================")
         print("=============================QUERY FINISHED==============================")
         print("=========================================================================\n\n")
-
+        self.endtime = time.time()
+        print(self.midtime - self.starttime)
+        print(self.endtime-self.starttime)
 
     def msg4t0_command1(self, event):
         """ click event in listbox aka Results
@@ -1677,15 +1724,17 @@ class GUIApp:
         else:
             print("print path for selection of line item No." + str(self.msg4t0.curselection()[0]))
             self.row = int(self.msg4t0.curselection()[0]) - 1
+
             # rownumber of cursorselection adujstment to to  all line in msg4t0
             self.Gclick = \
                 Draw_every_path_in_one_Graph([self.paths[self.row], ],self.graph)
             self.ax.clear()
+            self.pathscopy = copy.deepcopy(self.paths[self.row])
             self.colorlist = copy.deepcopy(self.Gclick[1])
             self.G = self.Gclick[0]
             nx.draw(self.G, ax=self.ax, with_labels=True, font_weight='bold', node_color=self.colorlist, font_size=7)
 
-            print(self.paths[int(self.msg4t0.curselection()[0]) - 1])
+            #print(self.paths[int(self.msg4t0.curselection()[0]) - 1])
 
             # delete old and set new
             self.optm3t4.delete(0,"end")
@@ -1751,6 +1800,19 @@ class GUIApp:
         print("\n\n=========================================================================")
         print("==========================Get Effect Details=============================")
         print("=========================================================================\n\n")
+        #
+
+        psmg= ""
+        Liste=["",]
+        popup = tk.Tk()
+
+        labellist = []
+        popup.resizable(width=True, height=True)# opens another instance of tk.window named popup
+        popup.wm_title("Effektinformationen!")
+
+        # buttonp = ttk.Button(popup, text="Link")
+        # buttonp.bind("<Button-1>", allinks(Liste))  # ,command =  lambda:  pass
+        # buttonp.pack()
 
         def popupmsg(pmsg):
             """This functions opens another tk window used as popup menu to display the effect informations
@@ -1758,16 +1820,18 @@ class GUIApp:
             :returns: None but displays the node properties """
             # https://pythonprogramming.net/tkinter-popup-message-window/
 
-            popup = tk.Tk()  # opens another instance of tk.window named popup
-            popup.wm_title("Effektinformationen!")
-            label = ttk.Label(popup, text=pmsg)  # label to display the effect informations
-            label.pack(side="top", fill="x", pady=10)  # pack can be used to position the widget 'label' into the window
+            # label2 = ttk.Label(popup, text=pmsg)  # label to display the effect informations
+            # label2.pack(side="top", fill="x", pady=10)  # pack can be used to position the widget 'label' into the window
             b1 = ttk.Button(popup, text="Okay", command=popup.destroy)  # this buttons ends the tk window
-            b1.pack()
-            popup.mainloop()
+            b1.pack(side="bottom")
+
+            # popup.mainloop()
+
+
 
         msg = ""
         try:
+
             # copied from the python documentation:
             # The try statement specifies exception handlers and/or cleanup code for a group of statements:
             # In this case it is used as an exception handler for an IndexError
@@ -1779,10 +1843,13 @@ class GUIApp:
                 if len(self.attrDict.items()) <= 5:
                     # only max 5 Effects will be displayed in order to keep the popup menu
                     # within displayable size
+
                     for el, val in self.attrDict.items():
+                        print(str(el) + str(val))
                         # two counters means two simultaneous for-loops for every el index is a separate val loop
                         # probably not necessary
 
+                        msg = ""
                         # first line for the Name property
                         msg = msg + str(el) + "\n\t\tName: \t\t\t\t" + str(val['Name']) + "\t\n"
                         # now all other property
@@ -1794,26 +1861,36 @@ class GUIApp:
                         msg = msg + "\t\tLink:\t\t\t\t" + str(val['Link']) + "\t\n"
                         msg = msg + "\t\tEinschränkung:\t\t\t\t" + str(val['Einschränkung']) + "\t\n"
                         msg = msg + "\t\tBeschreibung:\t\t\t" + str(val['Beschreibung']) + "\t\n"
-
-
+                        # print(msg)
+                        # print ("case 1")
                         msg = msg + "\n"
+                        labels = ttk.Label(popup, text=msg)
+                        labels.pack(side = "left")  # place(x=10, y=30 + (70 * el))
+                        msg=""
+
+
+
 
                 else:
 
                     msg = "Effektliste zu lang bitte wähle einzelne Ketten aus"
-                    popupmsg(msg)
+                popupmsg(msg)
 
             else:
                 # if an element  other than the first index is selected only the effect information of the
                 # element will be displayed
                 # get cursor selection and then compare each element of the path  with each dictonary item
+                el = 0
                 for element in self.paths[int(self.msg4t0.curselection()[0]) - 1]:
+
                     for k in self.attrDict.keys():
                         # if match  extract all sub dicts
                         # if the element name is matching one k of the effect dictionary it will be displayes
+                        print( str(k) + " and " + str(element))
                         if k == element:
+
                             # if matching the massage string is build by adding of the attributes
-                            msg = msg + str(k) + "\n\t\tName: \t\t\t\t" + str(
+                            msg = msg +str(k) + "\n\t\tName: \t\t\t\t" + str(
                                 self.attrDict[str(element)]['Name']) + "\t\n"
 
                             msg = msg + "\t\tFormel:\t\t\t\t" + str(self.attrDict[str(element)]['Formel']) + "\t\n"
@@ -1829,12 +1906,31 @@ class GUIApp:
                             msg = msg + "\t\tBeschreibung: \t\t\t" + str(
                                 self.attrDict[str(element)]['Beschreibung']) + "\t\n"
                             msg = msg + "\n"
+
+                            Liste.append(str(self.attrDict[str(element)]['Link']))
+
+
+                            labels =ttk.Label(popup, text=msg)
+                            labels.pack()#place(x=10, y=30 + (70 * el))
+
+                            # labellist.append(tk.Label(popup, text=msg))
+                            # labellist[el].pack()#place(x=10, y=30 + (70 * el))
+                            #
+                            # labellist[el].bind("<Button-1>", webbrowser.open_new(Liste[el]))
+                            msg=""
+                            el = el + 1
+                            break
+                        # labels.append(ttk.Label(popup, text=msg))
+                        # labels[el].pack(side="top", fill="x", pady=10)
+
                 popupmsg(msg)
+
         except IndexError:
             # the error means no query was executed before, there for the warnin message will be displayed
 
             msg = "  Bitte wähle erst eine Abfrage  "
             popupmsg(msg)
+
 
     def changemsg4t0(self, newnames):
         """ This functions updates the LISTBOX msg4t0
@@ -1857,12 +1953,12 @@ class GUIApp:
         """ Narrows the 'Wirkungsgröße' variable down to only state variables when true"""
 
         if self.chb0t0Var.get():  # =If self.checkbox.variable is True
-            self.optm8t0["values"] = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()]
+            self.optm8t0["values"] = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]]
             self.optm8t0.set("Bitte Wählen")
 
         else:
-            self.optm8t0["values"] = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                           [*NameProperties("Parameter", None, None, self.graph).GetRelationship()]
+            self.optm8t0["values"] = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                           [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]]
             self.optm8t0.set("Bitte Wählen")
 
 
@@ -1906,8 +2002,8 @@ class GUIApp:
                                 "Effekt", "Parameter-Effekt", "alle"]
             #list for menu is set to all variable which have a name property
 
-            self.adoptm2= [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()] + \
+            self.adoptm2= [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]] + \
                                 [*NameProperties("Effekt", None, None, self.graph).GetNode()] + \
                                 [*NameProperties("Parameter-Effekt", None, None, self.graph).GetNode()]
             # all effects, parameter-effetks, parameter, and variables are gathered
@@ -1940,8 +2036,8 @@ class GUIApp:
 
         if str(self.optm1t4.get()) == "alle" or str(self.optm1t4.get()) == "Bitte Wählen":
             if str(self.optm7t4.get()) == "Bitte Wählen" or str(self.optm7t4.get()) == "Name": # auswahl getroffen
-                self.adparameter = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()] + \
-                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()] + \
+                self.adparameter = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]] + \
+                               [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]] + \
                                 [*NameProperties("Effekt", None, None, self.graph).GetNode()] + \
                                 [*NameProperties("Parameter-Effekt", None, None, self.graph).GetNode()]
             else:
@@ -1949,10 +2045,10 @@ class GUIApp:
                      [*NameProperties("Parameter-Effekt", None, None, self.graph).GetOtherProperties("Ausprägung")]))
 
         elif str(self.optm1t4.get()) == "Zustandsgröße":
-            self.adparameter = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()]
+            self.adparameter = [*NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0]]
 
         elif str(self.optm1t4.get()) == "Parameter":
-            self.adparameter = [*NameProperties("Parameter", None, None, self.graph).GetRelationship()]
+            self.adparameter = [*NameProperties("Parameter", None, None, self.graph).GetRelationship()[0]]
 
         elif  str(self.optm1t4.get()) == "Parameter-Effekt": # Effekt or Parameter-Effekt
             if str(self.optm7t4.get()) == "Bitte Wählen" or str(self.optm7t4.get()) == "Name":
@@ -1984,7 +2080,7 @@ class GUIApp:
             # all paths are displayed in graph
             # self.paths is an assignemt of the queried paths into a list
             # self row is the rownumber of the selected row in the QUERY tab (tab0)
-            self.gs = tuple(self.paths[self.row])
+            self.gs = tuple(self.pathscopy)
 
         elif (str(self.optm3t4.get()) == "None" or str(self.optm3t4.get()) == "Bitte Wählen"
               or str(self.optm3t4.get()) == "Effektkette n/a" ) and \
@@ -2099,6 +2195,49 @@ class GUIApp:
         self.FCtk1t4.draw()
         # draw and draw all
 
+    def btn9t4_command(self):
+        if str(self.optm3t4.get()) == "alle":
+            # all effects from effectchain should be displayed
+
+            return
+
+        if (str(self.optm3t4.get()) == "None" or str(self.optm3t4.get()) == "Bitte Wählen"
+              or str(self.optm3t4.get()) == "Effektkette n/a" ) and \
+                (str(self.optm2t4.get()) == "None" or str(self.optm2t4.get()) == "Bitte Wählen"):
+            # both optionmenus are not selected: invalid command
+            return
+
+        elif str(self.optm3t4.get()) == "None" or str(self.optm3t4.get()) == "Bitte Wählen":
+            # no effect chain is selected  --> use of Object property (optm2t4)
+            self.gs = [str(self.optm2t4.get()),]
+            # graph paths is set accordingly  aka Name is taken from optm2t4 via .get()
+
+
+        elif str(self.optm2t4.get()) == "None" or str(self.optm2t4.get()) == "Bitte Wählen":
+            # no effect property is selected  --> use of effectchain (optm3t4)
+            self.gs = [str(self.optm3t4.get()),]
+            # graph paths is set accordingly  aka Name is taken from optm3t4 via .get()
+
+        else:
+            return
+
+        self.checkcypher = chrosscheck_cypher_get_Example(self.gs, self.graph)
+        # get neighbour nodes is similar to chrosscheck results a cypher string
+
+        self.DataTable = self.graph.run(self.checkcypher).to_table()
+        # cyüher string is exectudet in neo4j, result is returned in a table as datatable
+
+        self.query = [str(), 1]  # add variable self.query as tuple needed in querypathnames with # of CYPHER QUERIES
+        # due to Exequery .querypathnames normally gets a tuple of a Table and a integer
+        self.CheckNames = list(ExeQuery.QueryPathNames(self, datatale=self.DataTable)[0])
+        # checknames is an list of Node.Name attributes of teh connected nodes
+
+        # self.attrDict = ExeQuery.ExtractfromTable(self, datatable=self.DataTable[0])
+
+        self.inftext = "Beispiel: \n"
+        for element in range(len(self.DataTable)):
+            self.inftext = self.inftext + str(self.DataTable[element][0].end_node['Name']) + "\n"
+        self.ent6t4["text"] = self.inftext
 
 
     def btn1t1_command(self):
@@ -2310,18 +2449,20 @@ class GUIApp:
             # extract of dict {"ID": self.ID, "Lb": self.Lb, "Name": self.Name, "L": self.L, "F": self.F, "B": self.B ,
             #"A": self.A, "Lit":self.Lit, "V": self.V}
 
-            print(self.effdict)
+            #print(self.effdict)
             # set the optmmenu to  the values of the effectdict
             # self.entr20t2.delete(int(0), tk.END)
+            print(self.effdict)
             self.entr9t2.set(self.effdict["Lit"])
             self.entr12t2.set(self.effdict["F"])
             self.entr13t2.set(self.effdict["V"])
             self.entr14t2.set(self.effdict["A"])
-            self.entr21t2.delete(int(0), tk.END)
-            self.entr20t2.delete(int(0), tk.END)
-            self.entr20t2.insert(tk.END,self.effdict["B"])
-            self.entr21t2.insert(tk.END,self.effdict["L"])
-            self.entr22t2.set(self.effdict["E"])
+
+            self.entr21t2.delete(0, tk.END)  # this is  really buggy sometimes 0 works sometimes 1.0 :D
+            self.entr20t2.delete(1.0, tk.END)
+            self.entr20t2.insert(tk.INSERT, str(self.effdict["B"]))
+            self.entr21t2.insert(tk.INSERT, str(self.effdict["L"]))
+            self.entr22t2.insert(tk.INSERT, str(self.effdict["E"]))
 
         except (IndexError, TypeError): # effekt not found, or nothing to show
             return
@@ -2381,11 +2522,11 @@ class GUIApp:
         self.entr4t3.set("None")
 
         # update the paramter comboxvalues
-        self.entr1t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
-        self.entr2t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
-        self.entr3t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
-        self.entr4t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship())
-        self.entr8t2["values"] = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+        self.entr1t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
+        self.entr2t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
+        self.entr3t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
+        self.entr4t2["values"] = ('None',) + (NameProperties("Parameter", None, None, self.graph).GetRelationship()[0])
+        self.entr8t2["values"] = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
 
     def clearT2(self):
 
@@ -2396,7 +2537,10 @@ class GUIApp:
         self.entr8t2.set("None")
         self.entr7t2.set("None")
         self.entr6t2.set("None")
+        self.entr15t2.set("None")
         self.entr5t2.set("None")
+        self.entr16t2.set("None")
+        self.entr17t2.set("None")
         self.entr22t2.set("")
         self.entr23t2.set("None")
         self.entr0t2.set("")
@@ -2407,6 +2551,7 @@ class GUIApp:
         self.entr14t2.set("")
         self.entr21t2.delete(0, tk.END)
         self.msg3t2.delete(0, "end")
+        self.msg1t2["text"] = ""
 
         # self.ax2t2= plt.figure().add_subplot(1, 1, 1)
         # self.ax1t2= self.fig1t2.add_subplot(1, 1, 1)
@@ -2422,7 +2567,7 @@ class GUIApp:
                                                              ).GetOtherProperties("Getroffene_Vereinfachungen"))
         self.entr14t2['values'] = list(['None', ] + NameProperties('Effekt', None, None, self.graph
                                                              ).GetOtherProperties("Ausprägung"))
-        self.entr8t2['values'] = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship())
+        self.entr8t2['values'] = ('None',) + (NameProperties("Teildomäne", None, None, self.graph).GetRelationship()[0])
 
         print("\n\n=========================================================================")
         print("==============================Inputs Reset=============================")
